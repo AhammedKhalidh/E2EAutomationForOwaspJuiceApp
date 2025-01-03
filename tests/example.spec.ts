@@ -136,9 +136,9 @@ test('Register and Login to OWASP Juice Shop', async ({ page,context }) => {
   const successMessage = page.locator('.mat-snack-bar-container');
   await expect(successMessage).toHaveText('Registration completed successfully. You can now log in.X'); 
 
- await page.waitForURL('**/login');
+  await page.waitForURL('**/login');
 
- await page.getByLabel('Text field for the login email').fill(email); 
+  await page.getByLabel('Text field for the login email').fill(email); 
   await page.getByLabel('Text field for the login password').fill(password); 
   const loginButton =  page.getByLabel('Login', { exact: true })
   await loginButton.click();
@@ -163,13 +163,7 @@ test('Login, Add Products to Basket, Checkout, and Add Credit Card', async ({ pa
   const email = `testuser${Date.now()}@example.com`;;
   const password = 'Test@123';
 
-  const generateRandomCardInfo = () => {
-    return {
-      cardNumber: generateRandomCardNumber(), // Valid test card number
-      expirationDate: '12/25',
-      cvv: '123'
-    };
-  };
+  
 
   await page.goto('https://juice-shop.herokuapp.com/#/register');
   await page.waitForLoadState("domcontentloaded");
@@ -264,7 +258,7 @@ await expect(page.locator('#price')).toContainText('Total Price: 97.96¤');
   await page.getByPlaceholder('Please provide a city.').fill('Thanjavur');
   await page.getByPlaceholder('Please provide a state.').fill('Tamilandu');
   await page.getByRole('button', { name: 'send Submit' }).click();
-
+  page.waitForLoadState('load');
   await page.getByRole('cell').first().click();
  
  
@@ -272,22 +266,29 @@ await expect(page.locator('#price')).toContainText('Total Price: 97.96¤');
   //Proceed to Payment Screen
   await page.getByLabel('Proceed to payment selection').click();
   await page.getByRole('row', { name: 'Standard Delivery 0.00¤ 5 Days' }).getByRole('cell').first().click();
+  await WelcomeBannercloseButton.waitFor({ state: 'visible' });
+  await WelcomeBannercloseButton.click();
+  await expect(WelcomeBannercloseButton).toBeHidden();
   await expect(page.getByLabel('Proceed to delivery method')).toBeEnabled();
   await page.getByLabel('Proceed to delivery method').click();
 
-  
-  const creditCardInfo = generateRandomCardInfo();
 
   //Add credit card information
-  await page.fill('input[name="cardNumber"]', creditCardInfo.cardNumber);
-  await page.fill('input[name="expirationDate"]', creditCardInfo.expirationDate);
-  await page.fill('input[name="cvv"]', creditCardInfo.cvv);
+  await page.getByRole('button', { name: 'Add new card Add a credit or' }).click();
+  await page.getByLabel('Name *').fill('Tester');
+  await page.getByLabel('Card Number *').fill(generateRandomCardNumber());
+  await page.getByLabel('Expiry Month *').selectOption('4');
+  await page.getByLabel('Expiry Year *').selectOption('2087');
+  await page.getByRole('button', { name: 'send Submit' }).click();
 
-//Complete the purchase
-await page.click('button:has-text("Continue purchase")');
-
+  await page.getByRole('row', { name: '************0000 Tester 6/' }).locator('label').click();
+  await page.locator('app-payment').click({
+    button: 'right'
+  });
 //Assert purchase confirmation
-const purchaseConfirmation = page.locator('.mat-snack-bar-container');
-await expect(purchaseConfirmation).toHaveText('Purchase completed');
+await expect(page.getByLabel('Proceed to review')).toBeEnabled();
+await page.getByLabel('Proceed to review').click();
+  await page.getByLabel('Complete your purchase').click();
+  await expect(page.getByRole('heading')).toContainText('Thank you for your purchase!');
 
 })
